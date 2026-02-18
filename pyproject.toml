@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bblocks_client"
+authors = [
+    { name="Alejandro Villar", email="avillar@ogc.org" },
+]
+description = "OGC Blocks client"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = ">=3.7"
+dynamic = ["dependencies", "version"]
+keywords = ["ogc", "ogc blocks", "ogc rainbow"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Utilities",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ogcincubator/bblocks-docs/"
+"Documentation" = "https://github.com/ogcincubator/bblocks-docs/"
+"Repository" = "https://github.com/ogcincubator/bblocks-client-python.git"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["ogc*"]
+exclude = ["docs", "test"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools_scm]
+write_to = "ogc/bblocks/_version.py"
+
+[project.optional-dependencies]
+dev = [
+]
