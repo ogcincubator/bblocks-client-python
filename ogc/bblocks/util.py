@@ -9,3 +9,8 @@ def fetch_yaml(url: str):
     logger.debug("Fetching JSON/YAML data from %s", url)
     with urlopen(url) as f:
         return yaml.safe_load(f)
+
+
+def fetch_url(url: str):
+    with urlopen(url) as f:
+        return f.read().decode('utf-8')

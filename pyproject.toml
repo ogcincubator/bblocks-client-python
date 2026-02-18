@@ -40,5 +40,17 @@ dependencies = {file = ["requirements.txt"]}
 write_to = "ogc/bblocks/_version.py"
 
 [project.optional-dependencies]
+jsonschema = [
+    "jsonschema~=4.26.0",
+]
+rdf = [
+    "rdflib~=7.0",
+    "pyshacl~=0.28",
+    "jq~=1.11.0",
+]
+all = [
+    "bblocks_client[jsonschema]",
+    "bblocks_client[rdf]",
+]
 dev = [
 ]

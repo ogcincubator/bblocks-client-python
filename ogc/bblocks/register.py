@@ -78,6 +78,22 @@ class DocumentationEntry:
     mediatype: str
     url: str
 
+class SemanticUpliftAdditionalStepStage(str, Enum):
+    PRE = 'pre'
+    POST = 'post'
+
+@dataclass
+class SemanticUpliftAdditionalStep:
+    type: str
+    stage: SemanticUpliftAdditionalStepStage
+    ref: str | None = None
+    code: str | None = None
+
+
+@dataclass
+class SemanticUplift:
+    additional_steps: list[SemanticUpliftAdditionalStep] = field(default_factory=list)
+
 
 class ItemClass(str, Enum):
     SCHEMA = "schema"
@@ -129,6 +145,27 @@ class BuildingBlockSummary:
     # back-reference, populated by BuildingBlockRegister.from_dict
     source_register: 'BuildingBlockRegister | None' = field(default=None, init=False, repr=False)
 
+    def _get_cached_yaml(self, url: str) -> Any:
+        if not url:
+            return None
+        cache = self.source_register._url_cache
+        if url in cache:
+            return cache[url]
+        data = self.source_register.yaml_loader(url)
+        cache[url] = data
+        return data
+
+    @property
+    def resolved_schema(self) -> dict | None:
+        return self._get_cached_yaml(
+            self.schema.get('application/yaml', self.schema.get('application/json'))
+            if self.schema else None
+        )
+
+    @property
+    def resolved_ld_context(self) -> dict | None:
+        return self._get_cached_yaml(self.ld_context)
+
 
 @dataclass
 class BuildingBlock(BuildingBlockSummary):
@@ -136,6 +173,8 @@ class BuildingBlock(BuildingBlockSummary):
     git_repository: str | None = None
     git_path: str | None = None
     examples: list[Example] = field(default_factory=list)
+    summary: BuildingBlockSummary | None = None
+    semantic_uplift: SemanticUplift = field(default_factory=SemanticUplift)
 
 
 @dataclass
@@ -159,6 +198,7 @@ class BuildingBlockRegister:
     imported_registers: list['BuildingBlockRegister'] = field(default_factory=list, init=False, repr=False)
     url: str | None = None
     _bblocks_cache: dict[str, BuildingBlock] = field(default_factory=dict, init=False, repr=False)
+    _url_cache: dict[str, Any] = field(default_factory=dict, init=False, repr=False)
     yaml_loader: YamlLoader = fetch_yaml
 
     def get_item_summary(self, identifier: str) -> BuildingBlockSummary | None:
@@ -180,7 +220,9 @@ class BuildingBlockRegister:
         if not bblock:
             data = self.yaml_loader(summary.documentation['json-full'].url)
             bblock = dacite.from_dict(BuildingBlock, snake_keys(data),
-                                      config=dacite.Config(cast=[Status, ItemClass, set]))
+                                      config=dacite.Config(
+                                          cast=[Status, ItemClass, SemanticUpliftAdditionalStepStage, set]))
+            bblock.summary = summary
             bblock.source_register = summary.source_register
             summary.source_register._bblocks_cache[identifier] = bblock
         else:
