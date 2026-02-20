@@ -2,10 +2,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from ogc.bblocks.util import fetch_yaml
+
 try:
     import jsonschema as _jsonschema
+    from referencing import Registry, Resource
 except ImportError:
     _jsonschema = None
+    Registry = None
 
 try:
     from rdflib import Graph
@@ -43,6 +47,20 @@ class ValidationResult:
                 raise ValidationError()
 
 
+def _make_jsonschema_registry(bblock: BuildingBlockSummary) -> 'Registry':
+    cache = {}
+
+    def retrieve(uri: str):
+        if bblock.schema and uri in bblock.schema.values():
+            return Resource.from_contents(bblock.resolved_schema)
+
+        if uri not in cache:
+            cache[uri] = fetch_yaml(uri)
+        return Resource.from_contents(cache[uri])
+
+    return Registry(retrieve=retrieve)
+
+
 def validate_json(bblock: BuildingBlockSummary, data: Any) -> ValidationResult:
     if _jsonschema is None:
         raise ImportError(
@@ -55,7 +73,8 @@ def validate_json(bblock: BuildingBlockSummary, data: Any) -> ValidationResult:
     result = ValidationResult(bblock_identifier=bblock.item_identifier,
                               validation_type=ValidationType.JSON)
     try:
-        _jsonschema.validate(instance=data, schema=schema)
+        registry = _make_jsonschema_registry(bblock)
+        _jsonschema.validate(instance=data, schema=schema, registry=registry)
     except _jsonschema.exceptions.ValidationError as e:
         result.valid = False
         result.exception = e
